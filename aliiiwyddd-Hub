@@ -1,0 +1,858 @@
+--[[
+    aliiiwyddd-Hub - Universal Combat, Visuals, Player Utility, & Character Hub
+    Features: Center FOV with Offset, Multi-Part Triggerbot, Mobile Toggle Button, Player Management, Multi-Whitelist, Spinbot, Custom Theme, and Background Image.
+]]
+
+local successLib, Library = pcall(function()
+    local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+    return loadstring(game:HttpGet(repo .. "Library.lua"))()
+end)
+
+if not successLib or not Library then
+    warn("Failed to load Obsidian Library from repository. Check internet connection or exploit execution limits.")
+    return
+end
+
+local successTheme, ThemeManager = pcall(function()
+    local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+    return loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+end)
+
+local successSave, SaveManager = pcall(function()
+    local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+    return loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+end)
+
+local Options = Library.Options or {}
+local Toggles = Library.Toggles or {}
+
+Library.ForceCheckbox = false
+Library.ShowToggleFrameInKeybinds = true
+
+-- Services & Variables
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerCamera = Workspace.CurrentCamera
+
+-- Configuration State Table
+getgenv().ScriptConfig = {
+    TriggerBot = {
+        Enabled = false,
+        ClickDelay = 0,
+        WallCheck = false,
+        KnifeCheck = true,
+        ForceFieldCheck = true,
+    },
+    FOV = {
+        Visible = true,
+        Radius = 150,
+        FollowMode = "Center Screen",
+        OffsetX = 0,
+        OffsetY = 0,
+        Color = Color3.fromRGB(255, 255, 0), -- Yellow default
+        Transparency = 1,
+        Thickness = 1.5,
+        NumSides = 30,
+        Filled = false,
+    },
+    ESP = {
+        Boxes = false,
+        Names = false,
+        Tracers = false,
+        Health = false,
+    },
+    Chams = {
+        Enabled = false,
+        TargetType = "All Players",
+        MaterialMode = "ForceField",
+        Color = Color3.fromRGB(0, 255, 0),
+    },
+    Character = {
+        WalkSpeed = 16,
+        JumpPower = 50,
+        SpeedEnabled = false,
+        JumpEnabled = false,
+        SpinEnabled = false,
+        SpinSpeed = 20,
+    },
+    Whitelist = {},
+    SelectedPlayers = {},
+    IsViewing = false,
+    IsFlinging = false,
+    TargetViewPlayer = nil,
+    TargetFlingPlayer = nil,
+}
+
+-- Custom Yellow / Green / Black Theme Integration
+pcall(function()
+    Library.Theme.AccentColor = Color3.fromRGB(0, 255, 0)
+    Library.Theme.BackgroundColor = Color3.fromRGB(15, 15, 15)
+    Library.Theme.MainColor = Color3.fromRGB(25, 25, 25)
+    Library.Theme.OutlineColor = Color3.fromRGB(255, 255, 0)
+    Library.Theme.FontColor = Color3.fromRGB(255, 255, 255)
+end)
+
+-- FOV Circle Drawing Object
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = ScriptConfig.FOV.Visible
+FOVCircle.Radius = ScriptConfig.FOV.Radius
+FOVCircle.Color = ScriptConfig.FOV.Color
+FOVCircle.Transparency = ScriptConfig.FOV.Transparency
+FOVCircle.Thickness = ScriptConfig.FOV.Thickness
+FOVCircle.NumSides = ScriptConfig.FOV.NumSides
+FOVCircle.Filled = ScriptConfig.FOV.Filled
+
+-- Floating Mobile Triggerbot Button Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "aliiiwyddd_MobileTrigger"
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = CoreGui
+end
+ScreenGui.ResetOnSpawn = false
+
+local MobileButton = Instance.new("ImageButton")
+MobileButton.Name = "TriggerButton"
+MobileButton.Size = UDim2.new(0, 50, 0, 50)
+MobileButton.Position = UDim2.new(0.85, 0, 0.4, 0)
+MobileButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MobileButton.BorderColor3 = Color3.fromRGB(255, 255, 0)
+MobileButton.BorderSizePixel = 2
+MobileButton.Image = "rbxassetid://115381568287182"
+MobileButton.Visible = false
+MobileButton.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MobileButton
+
+-- Movable Mobile Button Functionality
+local dragging, dragInput, dragStart, startPos
+MobileButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MobileButton.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MobileButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MobileButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+MobileButton.MouseButton1Click:Connect(function()
+    ScriptConfig.TriggerBot.Enabled = not ScriptConfig.TriggerBot.Enabled
+    if Toggles.TBEnabled then
+        Toggles.TBEnabled:SetValue(ScriptConfig.TriggerBot.Enabled)
+    end
+    MobileButton.BorderColor3 = ScriptConfig.TriggerBot.Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 0)
+end)
+
+-- Raycast setup for Wall Checks
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+raycastParams.IgnoreWater = true
+
+local function WallCheck(part)
+    if not ScriptConfig.TriggerBot.WallCheck then return true end
+    local character = player.Character
+    if not character then return false end
+    
+    raycastParams.FilterDescendantsInstances = {character}
+    local origin = playerCamera.CFrame.Position
+    local direction = part.Position - origin
+    
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    if result and result.Instance:IsDescendantOf(part.Parent) then
+        return true
+    end
+    return false
+end
+
+-- Knife/Weapon Check
+local function IsValidWeapon(tool)
+    if not ScriptConfig.TriggerBot.KnifeCheck then return true end
+    if not tool then return false end
+    local name = string.lower(tool.Name)
+    if string.find(name, "knife") or string.find(name, "sword") or string.find(name, "melee") or string.find(name, "bat") or string.find(name, "fist") then
+        return false
+    end
+    return true
+end
+
+-- ForceField Check
+local function HasForceField(targetChar)
+    if not ScriptConfig.TriggerBot.ForceFieldCheck then return false end
+    return targetChar:FindFirstChildOfClass("ForceField") ~= nil
+end
+
+-- Whitelist Check
+local function IsWhitelisted(targetPlayer)
+    if not targetPlayer then return false end
+    return ScriptConfig.Whitelist[targetPlayer.UserId] == true or ScriptConfig.SelectedPlayers[targetPlayer.Name] == true
+end
+
+-- Get Current FOV Center Position
+local function GetFOVCenter()
+    if ScriptConfig.FOV.FollowMode == "Mouse / Touch" then
+        local mousePos = UserInputService:GetMouseLocation()
+        return Vector2.new(mousePos.X, mousePos.Y)
+    else
+        local center = Vector2.new(playerCamera.ViewportSize.X / 2, playerCamera.ViewportSize.Y / 2)
+        return Vector2.new(center.X + ScriptConfig.FOV.OffsetX, center.Y + ScriptConfig.FOV.OffsetY)
+    end
+end
+
+-- Get Closest Target inside FOV scanning all valid body parts
+local function GetClosestTarget()
+    local localChar = player.Character
+    if not localChar then return nil end
+    local localHum = localChar:FindFirstChildOfClass("Humanoid")
+    if not localHum or localHum.Health <= 0 then return nil end
+
+    local closestTarget = nil
+    local shortestDistance = math.huge
+    local fovCenter = GetFOVCenter()
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and not IsWhitelisted(p) then
+            local char = p.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                if not HasForceField(char) then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            local vpPos, onScreen = playerCamera:WorldToViewportPoint(part.Position)
+                            if onScreen then
+                                local dist = (Vector2.new(vpPos.X, vpPos.Y) - fovCenter).Magnitude
+                                if dist <= ScriptConfig.FOV.Radius and dist < shortestDistance then
+                                    if WallCheck(part) then
+                                        closestTarget = char
+                                        shortestDistance = dist
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestTarget
+end
+
+-- Storage for ESP Drawing objects per player
+local espCache = {}
+
+local function removeESP(p)
+    if espCache[p] then
+        for _, obj in pairs(espCache[p]) do
+            pcall(function() obj:Remove() end)
+        end
+        espCache[p] = nil
+    end
+end
+
+-- Dynamic Chams Applier
+local function applyChamsToCharacter(char, apply)
+    if not char then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            if apply and ScriptConfig.Chams.Enabled then
+                local targetType = ScriptConfig.Chams.TargetType
+                local isSelf = (char == player.Character)
+                
+                local shouldApply = false
+                if targetType == "All Players" then
+                    shouldApply = true
+                elseif targetType == "Enemies Only" and not isSelf then
+                    shouldApply = true
+                elseif targetType == "Myself Only" and isSelf then
+                    shouldApply = true
+                end
+
+                if shouldApply then
+                    pcall(function()
+                        part.Material = Enum.Material[ScriptConfig.Chams.MaterialMode] or Enum.Material.ForceField
+                        part.Color = ScriptConfig.Chams.Color
+                    end)
+                else
+                    part.Material = Enum.Material.Plastic
+                end
+            else
+                part.Material = Enum.Material.Plastic
+            end
+        end
+    end
+end
+
+-- Main RenderStepped Loop
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Visible = ScriptConfig.FOV.Visible
+    FOVCircle.Radius = ScriptConfig.FOV.Radius
+    FOVCircle.Color = ScriptConfig.FOV.Color
+    FOVCircle.Transparency = ScriptConfig.FOV.Transparency
+    FOVCircle.Thickness = ScriptConfig.FOV.Thickness
+    FOVCircle.Position = GetFOVCenter()
+
+    -- Character Speed, Jump, and Spinbot Modifiers
+    local char = player.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if hum then
+            if ScriptConfig.Character.SpeedEnabled then
+                hum.WalkSpeed = ScriptConfig.Character.WalkSpeed
+            end
+            if ScriptConfig.Character.JumpEnabled then
+                hum.JumpPower = ScriptConfig.Character.JumpPower
+            end
+        end
+        if root and ScriptConfig.Character.SpinEnabled then
+            root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(ScriptConfig.Character.SpinSpeed), 0)
+        end
+    end
+
+    -- Triggerbot Execution
+    if ScriptConfig.TriggerBot.Enabled then
+        local target = GetClosestTarget()
+        if target then
+            local tool = char and char:FindFirstChildOfClass("Tool")
+            if tool and IsValidWeapon(tool) then
+                local triggered = false
+                for _, part in ipairs(target:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local vpPos, onScreen = playerCamera:WorldToViewportPoint(part.Position)
+                        if onScreen then
+                            local dist = (Vector2.new(vpPos.X, vpPos.Y) - FOVCircle.Position).Magnitude
+                            if dist <= ScriptConfig.FOV.Radius then
+                                triggered = true
+                                break
+                            end
+                        end
+                    end
+                end
+
+                if triggered then
+                    if ScriptConfig.TriggerBot.ClickDelay > 0 then
+                        task.wait(ScriptConfig.TriggerBot.ClickDelay)
+                    end
+                    pcall(function() tool:Activate() end)
+                end
+            end
+        end
+    end
+
+    -- View Mode Handling
+    if ScriptConfig.IsViewing and ScriptConfig.TargetViewPlayer then
+        local targetP = Players:FindFirstChild(ScriptConfig.TargetViewPlayer)
+        if targetP and targetP.Character and targetP.Character:FindFirstChild("Humanoid") then
+            playerCamera.CameraSubject = targetP.Character.Humanoid
+        end
+    else
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            playerCamera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
+        end
+    end
+
+    -- Fling Logic
+    if ScriptConfig.IsFlinging and ScriptConfig.TargetFlingPlayer then
+        local targetP = Players:FindFirstChild(ScriptConfig.TargetFlingPlayer)
+        if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local tRoot = targetP.Character.HumanoidRootPart
+            if root then
+                root.AssemblyLinearVelocity = Vector3.new(30000, 30000, 30000)
+                root.CFrame = tRoot.CFrame
+            end
+        end
+    end
+
+    -- ESP & Chams Rendering Update Loop
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local pChar = p.Character
+            local pHum = pChar and pChar:FindFirstChildOfClass("Humanoid")
+            local rootPart = pChar and pChar:FindFirstChild("HumanoidRootPart")
+
+            if pChar and pHum and pHum.Health > 0 and rootPart then
+                if not espCache[p] then
+                    espCache[p] = {
+                        Box = Drawing.new("Square"),
+                        Name = Drawing.new("Text"),
+                        Tracer = Drawing.new("Line"),
+                        Health = Drawing.new("Text")
+                    }
+                    espCache[p].Box.Filled = false
+                    espCache[p].Box.Thickness = 1.5
+                    espCache[p].Name.Size = 14
+                    espCache[p].Name.Center = true
+                    espCache[p].Name.Outline = true
+                    espCache[p].Health.Size = 13
+                    espCache[p].Health.Center = true
+                    espCache[p].Health.Outline = true
+                    espCache[p].Tracer.Thickness = 1.5
+                end
+
+                local cache = espCache[p]
+                local vector, onScreen = playerCamera:WorldToViewportPoint(rootPart.Position)
+
+                if onScreen then
+                    local head = pChar:FindFirstChild("Head")
+                    local headPos = head and playerCamera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0)) or vector
+                    local legPos = playerCamera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 3, 0))
+                    local height = math.abs(headPos.Y - legPos.Y)
+                    local width = height / 2
+
+                    if ScriptConfig.ESP.Boxes then
+                        cache.Box.Visible = true
+                        cache.Box.Size = Vector2.new(width, height)
+                        cache.Box.Position = Vector2.new(vector.X - width / 2, headPos.Y)
+                        cache.Box.Color = Color3.fromRGB(255, 255, 0)
+                    else
+                        cache.Box.Visible = false
+                    end
+
+                    if ScriptConfig.ESP.Names then
+                        cache.Name.Visible = true
+                        cache.Name.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+                        cache.Name.Position = Vector2.new(vector.X, headPos.Y - 18)
+                        cache.Name.Color = Color3.fromRGB(255, 255, 255)
+                    else
+                        cache.Name.Visible = false
+                    end
+
+                    if ScriptConfig.ESP.Health then
+                        cache.Health.Visible = true
+                        cache.Health.Text = "HP: " .. math.floor(pHum.Health)
+                        cache.Health.Position = Vector2.new(vector.X - width/2 - 30, headPos.Y)
+                        cache.Health.Color = Color3.fromRGB(0, 255, 0)
+                    else
+                        cache.Health.Visible = false
+                    end
+
+                    if ScriptConfig.ESP.Tracers then
+                        cache.Tracer.Visible = true
+                        cache.Tracer.From = Vector2.new(playerCamera.ViewportSize.X / 2, playerCamera.ViewportSize.Y)
+                        cache.Tracer.To = Vector2.new(vector.X, legPos.Y)
+                        cache.Tracer.Color = Color3.fromRGB(255, 255, 0)
+                    else
+                        cache.Tracer.Visible = false
+                    end
+                else
+                    cache.Box.Visible = false
+                    cache.Name.Visible = false
+                    cache.Health.Visible = false
+                    cache.Tracer.Visible = false
+                end
+
+                applyChamsToCharacter(pChar, true)
+            else
+                removeESP(p)
+            end
+        end
+    end
+
+    if player.Character then
+        applyChamsToCharacter(player.Character, true)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    removeESP(p)
+end)
+
+-- Window Setup using Obsidian Library with Background Image
+local Window = Library:CreateWindow({
+    Title = "aliiiwyddd-Hub",
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+    MobileButtonsSide = "Right"
+})
+
+-- Apply Background Image to Main Library Frame Safely
+task.spawn(function()
+    task.wait(0.5)
+    pcall(function()
+        local parentContainer = (gethui and gethui()) or CoreGui
+        for _, guiObj in ipairs(parentContainer:GetDescendants()) do
+            if guiObj:IsA("ImageLabel") and guiObj.Parent and guiObj.Parent.Name == "Main" then
+                guiObj.Image = "rbxassetid://102087946006644"
+                guiObj.ScaleType = Enum.ScaleType.Slice
+            end
+        end
+    end)
+end)
+
+local Tabs = {
+    Main = Window:AddTab("Triggerbot", "crosshair"),
+    Visuals = Window:AddTab("Visuals", "eye"),
+    Players = Window:AddTab("Players", "users"),
+    Character = Window:AddTab("Character", "user"),
+    ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- Triggerbot Tab Groupboxes
+local LeftTriggerGroup = Tabs.Main:AddLeftGroupbox("Triggerbot Controls", "zap")
+local RightFOVGroup = Tabs.Main:AddRightGroupbox("FOV Settings", "circle")
+
+LeftTriggerGroup:AddToggle("TBEnabled", {
+    Text = "Enable Triggerbot",
+    Default = false,
+    Tooltip = "Automatically triggers tool activation when target is in FOV",
+    Callback = function(value)
+        ScriptConfig.TriggerBot.Enabled = value
+        MobileButton.Visible = value
+        MobileButton.BorderColor3 = value and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 0)
+    end
+})
+
+LeftTriggerGroup:AddInput("ClickDelayInput", {
+    Default = "0",
+    Numeric = true,
+    Finished = true,
+    Text = "Click Delay (Seconds)",
+    Tooltip = "Delay before firing",
+    Callback = function(value)
+        ScriptConfig.TriggerBot.ClickDelay = tonumber(value) or 0
+    end
+})
+
+LeftTriggerGroup:AddToggle("WallCheckToggle", {
+    Text = "Wall Check",
+    Default = false,
+    Tooltip = "Prevents firing through walls",
+    Callback = function(value)
+        ScriptConfig.TriggerBot.WallCheck = value
+    end
+})
+
+LeftTriggerGroup:AddToggle("KnifeCheckToggle", {
+    Text = "Gun/Tool Check",
+    Default = true,
+    Tooltip = "Only shoot when holding ranged items",
+    Callback = function(value)
+        ScriptConfig.TriggerBot.KnifeCheck = value
+    end
+})
+
+LeftTriggerGroup:AddToggle("FFCheckToggle", {
+    Text = "ForceField Check",
+    Default = true,
+    Tooltip = "Skip players with active forcefields",
+    Callback = function(value)
+        ScriptConfig.TriggerBot.ForceFieldCheck = value
+    end
+})
+
+-- FOV Options
+RightFOVGroup:AddToggle("FOVVisible", {
+    Text = "Show FOV Circle",
+    Default = true,
+    Callback = function(value)
+        ScriptConfig.FOV.Visible = value
+    end
+})
+
+RightFOVGroup:AddDropdown("FOVFollowMode", {
+    Values = {"Center Screen", "Mouse / Touch"},
+    Default = 1,
+    Text = "FOV Follow Mode",
+    Callback = function(val)
+        ScriptConfig.FOV.FollowMode = val
+    end
+})
+
+RightFOVGroup:AddSlider("FOVRadius", {
+    Text = "FOV Radius",
+    Default = 150,
+    Min = 10,
+    Max = 800,
+    Rounding = 0,
+    Callback = function(value)
+        ScriptConfig.FOV.Radius = value
+    end
+})
+
+RightFOVGroup:AddSlider("FOVOffsetX", {
+    Text = "Center Offset X (Left/Right)",
+    Default = 0,
+    Min = -300,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(value)
+        ScriptConfig.FOV.OffsetX = value
+    end
+})
+
+RightFOVGroup:AddSlider("FOVOffsetY", {
+    Text = "Center Offset Y (Up/Down)",
+    Default = 0,
+    Min = -300,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(value)
+        ScriptConfig.FOV.OffsetY = value
+    end
+})
+
+RightFOVGroup:AddLabel("FOV Color"):AddColorPicker("FOVColorPicker", {
+    Default = Color3.fromRGB(255, 255, 0),
+    Callback = function(color)
+        ScriptConfig.FOV.Color = color
+    end
+})
+
+-- Visuals Tab Groupboxes
+local LeftESPGroup = Tabs.Visuals:AddLeftGroupbox("ESP Features", "eye")
+local RightChamsGroup = Tabs.Visuals:AddRightGroupbox("Chams Customization", "user-check")
+
+LeftESPGroup:AddToggle("BoxESPToggle", {
+    Text = "Enable Box ESP",
+    Default = false,
+    Callback = function(value) ScriptConfig.ESP.Boxes = value end
+})
+
+LeftESPGroup:AddToggle("NameESPToggle", {
+    Text = "Enable Name & Display ESP",
+    Default = false,
+    Callback = function(value) ScriptConfig.ESP.Names = value end
+})
+
+LeftESPGroup:AddToggle("TracersToggle", {
+    Text = "Enable Tracer ESP",
+    Default = false,
+    Callback = function(value) ScriptConfig.ESP.Tracers = value end
+})
+
+LeftESPGroup:AddToggle("HealthESPToggle", {
+    Text = "Enable Health ESP",
+    Default = false,
+    Callback = function(value) ScriptConfig.ESP.Health = value end
+})
+
+RightChamsGroup:AddToggle("ChamsEnabled", {
+    Text = "Enable Chams",
+    Default = false,
+    Callback = function(value) ScriptConfig.Chams.Enabled = value end
+})
+
+RightChamsGroup:AddDropdown("ChamsTarget", {
+    Values = {"All Players", "Enemies Only", "Myself Only"},
+    Default = 1,
+    Text = "Chams Target Selector",
+    Callback = function(val)
+        ScriptConfig.Chams.TargetType = val
+    end
+})
+
+RightChamsGroup:AddDropdown("ChamsMode", {
+    Values = {"ForceField", "Neon", "Glass", "Plastic"},
+    Default = 1,
+    Text = "Chams Material Type",
+    Callback = function(val)
+        ScriptConfig.Chams.MaterialMode = val
+    end
+})
+
+RightChamsGroup:AddLabel("Chams Color"):AddColorPicker("ChamsColorPicker", {
+    Default = Color3.fromRGB(0, 255, 0),
+    Callback = function(color)
+        ScriptConfig.Chams.Color = color
+    end
+})
+
+-- Players Tab Setup
+local LeftPlayerListGroup = Tabs.Players:AddLeftGroupbox("Player Selection", "list")
+local RightPlayerActionsGroup = Tabs.Players:AddRightGroupbox("Player Actions", "shield")
+
+local function getPlayerListValues()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local dist = 0
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                dist = math.floor((player.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude)
+            end
+            local statusTag = ScriptConfig.SelectedPlayers[p.Name] and " [SELECTED ✓]" or ""
+            local wlTag = ScriptConfig.Whitelist[p.UserId] and " [WL]" or ""
+            table.insert(list, p.DisplayName .. " (@" .. p.Name .. ")" .. statusTag .. wlTag .. " - " .. dist .. "m")
+        end
+    end
+    if #list == 0 then table.insert(list, "None") end
+    return list
+end
+
+LeftPlayerListGroup:AddDropdown("PlayerSelectDropdown", {
+    Values = getPlayerListValues(),
+    Default = 1,
+    Text = "Select Player",
+    Callback = function(val)
+        if val and val ~= "None" then
+            local username = val:match("@%((.-)%)")
+            if username then
+                ScriptConfig.SelectedPlayers[username] = not ScriptConfig.SelectedPlayers[username]
+                pcall(function()
+                    Options.PlayerSelectDropdown:SetValues(getPlayerListValues())
+                end)
+            end
+        end
+    end
+})
+
+LeftPlayerListGroup:AddButton("Refresh Player List", function()
+    pcall(function()
+        Options.PlayerSelectDropdown:SetValues(getPlayerListValues())
+    end)
+end)
+
+RightPlayerActionsGroup:AddButton("Teleport to Selected", function()
+    for name, selected in pairs(ScriptConfig.SelectedPlayers) do
+        if selected then
+            local targetP = Players:FindFirstChild(name)
+            if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = targetP.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                end
+            end
+        end
+    end
+end)
+
+RightPlayerActionsGroup:AddToggle("ViewPlayerToggle", {
+    Text = "View Selected Player",
+    Default = false,
+    Callback = function(val)
+        ScriptConfig.IsViewing = val
+        for name, selected in pairs(ScriptConfig.SelectedPlayers) do
+            if selected then
+                ScriptConfig.TargetViewPlayer = name
+                break
+            end
+        end
+        if not val and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            playerCamera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
+        end
+    end
+})
+
+RightPlayerActionsGroup:AddToggle("FlingPlayerToggle", {
+    Text = "Fling Selected Player",
+    Default = false,
+    Callback = function(val)
+        ScriptConfig.IsFlinging = val
+        for name, selected in pairs(ScriptConfig.SelectedPlayers) do
+            if selected then
+                ScriptConfig.TargetFlingPlayer = name
+                break
+            end
+        end
+    end
+})
+
+RightPlayerActionsGroup:AddButton("Whitelist / Un-Whitelist Selected", function()
+    for name, selected in pairs(ScriptConfig.SelectedPlayers) do
+        if selected then
+            local targetP = Players:FindFirstChild(name)
+            if targetP then
+                local currentStatus = ScriptConfig.Whitelist[targetP.UserId]
+                ScriptConfig.Whitelist[targetP.UserId] = not currentStatus
+                ScriptConfig.Whitelist[targetP.Name] = not currentStatus
+            end
+        end
+    end
+    pcall(function()
+        Options.PlayerSelectDropdown:SetValues(getPlayerListValues())
+    end)
+end)
+
+-- Character Tab Groupboxes
+local LeftCharGroup = Tabs.Character:AddLeftGroupbox("Movement & Fun Settings", "activity")
+
+LeftCharGroup:AddToggle("SpeedToggle", {
+    Text = "Enable Custom WalkSpeed",
+    Default = false,
+    Callback = function(value) ScriptConfig.Character.SpeedEnabled = value end
+})
+
+LeftCharGroup:AddSlider("WalkSpeedSlider", {
+    Text = "WalkSpeed Value",
+    Default = 16,
+    Min = 16,
+    Max = 150,
+    Rounding = 0,
+    Callback = function(value) ScriptConfig.Character.WalkSpeed = value end
+})
+
+LeftCharGroup:AddToggle("JumpToggle", {
+    Text = "Enable Custom JumpPower",
+    Default = false,
+    Callback = function(value) ScriptConfig.Character.JumpEnabled = value end
+})
+
+LeftCharGroup:AddSlider("JumpPowerSlider", {
+    Text = "JumpPower Value",
+    Default = 50,
+    Min = 50,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(value) ScriptConfig.Character.JumpPower = value end
+})
+
+LeftCharGroup:AddToggle("SpinbotToggle", {
+    Text = "Enable Spinbot",
+    Default = false,
+    Callback = function(value) ScriptConfig.Character.SpinEnabled = value end
+})
+
+LeftCharGroup:AddSlider("SpinSpeedSlider", {
+    Text = "Spin Speed",
+    Default = 20,
+    Min = 5,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(value) ScriptConfig.Character.SpinSpeed = value end
+})
+
+-- UI Settings Tab Setup (Configs only)
+if ThemeManager and SaveManager then
+    pcall(function()
+        ThemeManager:SetLibrary(Library)
+        SaveManager:SetLibrary(Library)
+        SaveManager:IgnoreThemeSettings()
+        SaveManager:SetIgnoreIndexes({})
+        SaveManager:BuildConfigSection(Tabs["UI Settings"])
+    end)
+end
+
+pcall(function()
+    Library:Notify({
+        Title = "aliiiwyddd-Hub Loaded",
+        Description = "Custom Yellow/Green theme & background initialized successfully.",
+        Time = 5
+    })
+end)
