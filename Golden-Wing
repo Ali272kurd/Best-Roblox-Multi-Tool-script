@@ -1,15 +1,1 @@
-local success, code = pcall(function()
-    return game:HttpGet("https://pastebin.com/raw/cbxDFkAR")
-end)
-
-if success and code then
-    -- Runs the fetched text directly as a function chunk
-    local runScript = load(code)
-    if runScript then
-        runScript()
-    else
-        print("Failed to compile the script chunk.")
-    end
-else
-    print("Failed to fetch script from Pastebin.")
-end
+loadstring(game:HttpGet("https://pastebin.com/raw/cbxDFkAR"))()
