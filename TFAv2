@@ -22,36 +22,37 @@ if not (R and R:WaitForChild("Throw_Start", 5)) then
 end
 
 -- ===== SETTING =====
-local ICON_ASSET = "rbxassetid://120489352670220"
+local SCRIPT_BASE = "https://raw.githubusercontent.com/Dr6seven/throwforanimals/refs/heads/main/"
+local SCRIPT_FILES = { "script.lua", "throw.lua" }
+local CUSTOM_ICON = "rbxassetid://120489352670220"
 local CONFIG_FILE = "ThrowForAnimals_configs.json"
 local LASTSTATE_FILE = "ThrowForAnimals_laststate.json"
 
--- penghitung Total User
 local COUNTER_BASE = "https://abacus.jasoncameron.dev"
 local COUNTER_NS = "throwforanimals-aliiiwyddd"
 local COUNTER_KEY = "users"
-local SALT = "ganti-teks-acak-ini"
+local SALT = "aliiiwyddd-v2-salt"
 
-local RETRY = 3            
-local SILENT_LIMIT = 20    
-local TAP_DELAY = 0.15     
-local TP_HEIGHT = 3.5      
-local LINE_HEIGHT = 3      
-local EQUIP_EVERY = 30     
-local SELL_EVERY = 60      
-local UPGRADE_EVERY = 10   
-local FOOD_EVERY = 15      
-local FOOD_MAX = 120       
-local TAMPILKAN_STATUS = false 
-local DEBUG_RESOLVE = false    
-local THROW_ACCURACY = 1   
-local THROW_EXTRA = 0.3    
+local RETRY = 3
+local SILENT_LIMIT = 20
+local TAP_DELAY = 0.15
+local TP_HEIGHT = 3.5
+local LINE_HEIGHT = 3
+local EQUIP_EVERY = 30
+local SELL_EVERY = 60
+local UPGRADE_EVERY = 10
+local FOOD_EVERY = 15
+local FOOD_MAX = 120
+local TAMPILKAN_STATUS = false
+local DEBUG_RESOLVE = false
+local THROW_ACCURACY = 1
+local THROW_EXTRA = 0.3
 
 local CONFIG_KEYS = { "AutoTrain", "AutoThrow", "AutoIndex", "AutoBuyFood", "AutoEquipFood", "AutoBar",
     "AutoSell", "AutoEquip", "AutoFence", "Invisible", "AutoExec", "AutoReconnect", "AntiAfk", "ESPPlayer",
     "AutoBuyEvent", "AutoInfuse", "AutoClaimIndex", "AutoClaimCollection", "FpsBooster" }
 
--- ===== BERSIHKAN VERSI LAMA =====
+-- ===== CLEANUP OLD INSTANCES =====
 if getgenv().TFAVisual then pcall(getgenv().TFAVisual.stop) end
 getgenv().THROW_POS = nil
 if getgenv().__TapConn then pcall(function() getgenv().__TapConn:Disconnect() end) end
@@ -66,16 +67,18 @@ local myToken = (getgenv().__ThrowToken or 0) + 1
 getgenv().__ThrowToken = myToken
 task.wait(0.3)
 
--- Modern Redish & Crimson Theme Palette
-local C_BG   = Color3.fromRGB(16, 12, 15)
-local C_BAR  = Color3.fromRGB(24, 16, 20)
-local C_ROW  = Color3.fromRGB(34, 20, 26)
-local C_OFF  = Color3.fromRGB(65, 45, 52)
-local C_ON   = Color3.fromRGB(230, 45, 75)   -- Vibrant modern crimson red
-local C_RED  = Color3.fromRGB(210, 40, 50)
-local C_GRAY = Color3.fromRGB(160, 145, 150)
-local C_WARN = Color3.fromRGB(240, 150, 60)
-local C_GOOD = Color3.fromRGB(235, 65, 90)   -- Crimson highlight
+-- ===== MODERN REDDISH PALETTE =====
+local C_BG     = Color3.fromRGB(16, 11, 13)
+local C_BAR    = Color3.fromRGB(26, 15, 18)
+local C_ROW    = Color3.fromRGB(36, 20, 24)
+local C_OFF    = Color3.fromRGB(68, 42, 48)
+local C_ON     = Color3.fromRGB(220, 45, 65)
+local C_ACCENT = Color3.fromRGB(200, 35, 55)
+local C_STROKE = Color3.fromRGB(115, 32, 44)
+local C_RED    = Color3.fromRGB(165, 38, 48)
+local C_GRAY   = Color3.fromRGB(175, 150, 155)
+local C_WARN   = Color3.fromRGB(245, 155, 65)
+local C_GOOD   = Color3.fromRGB(255, 95, 115)
 
 local State = { AutoTrain = false, AutoThrow = false, AutoIndex = false, AutoReconnect = false, AutoBuyFood = false, AutoEquipFood = false,
     AutoBar = false, AutoSell = false, AutoEquip = false, AutoFence = false,
@@ -93,7 +96,7 @@ local function corner(inst, r) Instance.new("UICorner", inst).CornerRadius = UDi
 local order = 0
 local function nextOrder() order += 1; return order end
 
--- ===== FILE CONFIG =====
+-- ===== CONFIG FILE =====
 local function fsOk() return writefile and readfile and isfile end
 
 local cfgData = { configs = {}, autoload = nil }
@@ -113,7 +116,7 @@ local function writeCfgFile()
 end
 readCfgFile()
 
--- ===== TOTAL USER =====
+-- ===== TOTAL USER COUNTER =====
 local function userKey()
     local h1, h2 = 5381, 52711
     for c in (SALT .. tostring(lp.UserId)):gmatch(".") do
@@ -174,7 +177,7 @@ local ok = pcall(function() gui.Parent = (gethui and gethui()) or game:GetServic
 if not ok or not gui.Parent then gui.Parent = lp:WaitForChild("PlayerGui") end
 getgenv().ThrowUI = gui
 
-local WIN_W, WIN_H = 470, 300
+local WIN_W, WIN_H = 480, 310
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, WIN_W, 0, WIN_H)
 main.Position = UDim2.new(0.5, -WIN_W / 2, 0.5, -WIN_H / 2)
@@ -183,14 +186,32 @@ main.BorderSizePixel = 0
 main.ClipsDescendants = true
 main.Parent = gui
 corner(main, 12)
-Instance.new("UIStroke", main).Color = Color3.fromRGB(80, 30, 45)
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Color = C_STROKE
+mainStroke.Thickness = 1.5
+
+-- Subtle modern crimson gradient on main frame
+local bgGrad = Instance.new("UIGradient", main)
+bgGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 14, 18)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 11, 13)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(24, 12, 15))
+})
+bgGrad.Rotation = 135
 
 -- ===== TITLE BAR =====
 local bar = Instance.new("Frame")
-bar.Size = UDim2.new(1, 0, 0, 32)
+bar.Size = UDim2.new(1, 0, 0, 34)
 bar.BackgroundColor3 = C_BAR
 bar.BorderSizePixel = 0
 bar.Parent = main
+
+local barLine = Instance.new("Frame")
+barLine.Size = UDim2.new(1, 0, 0, 1)
+barLine.Position = UDim2.new(0, 0, 1, -1)
+barLine.BackgroundColor3 = C_STROKE
+barLine.BorderSizePixel = 0
+barLine.Parent = bar
 
 local titleBox = Instance.new("Frame")
 titleBox.Size = UDim2.new(1, -220, 1, 0)
@@ -201,7 +222,7 @@ local tbl = Instance.new("UIListLayout", titleBox)
 tbl.FillDirection = Enum.FillDirection.Horizontal
 tbl.VerticalAlignment = Enum.VerticalAlignment.Center
 tbl.SortOrder = Enum.SortOrder.LayoutOrder
-tbl.Padding = UDim.new(0, 5)
+tbl.Padding = UDim.new(0, 6)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 0, 0, 16)
@@ -215,13 +236,13 @@ title.LayoutOrder = 1
 title.Parent = titleBox
 
 local credit = Instance.new("TextLabel")
-credit.Size = UDim2.new(0, 0, 0, 10)
+credit.Size = UDim2.new(0, 0, 0, 12)
 credit.AutomaticSize = Enum.AutomaticSize.X
 credit.BackgroundTransparency = 1
 credit.Text = "by aliiiwyddd"
 credit.TextColor3 = C_GOOD
 credit.Font = Enum.Font.GothamBold
-credit.TextSize = 7
+credit.TextSize = 9
 credit.LayoutOrder = 2
 credit.Parent = titleBox
 
@@ -231,9 +252,9 @@ local OWNER_IDS = {
 
 local search = Instance.new("TextBox")
 search.Size = UDim2.new(0, 120, 0, 22)
-search.Position = UDim2.new(1, -196, 0, 5)
+search.Position = UDim2.new(1, -196, 0, 6)
 search.BackgroundColor3 = C_BG
-search.PlaceholderText = "Search"
+search.PlaceholderText = "Search..."
 search.PlaceholderColor3 = C_GRAY
 search.Text = ""
 search.TextColor3 = Color3.new(1, 1, 1)
@@ -242,12 +263,12 @@ search.TextSize = 11
 search.ClearTextOnFocus = false
 search.Parent = bar
 corner(search, 6)
-Instance.new("UIStroke", search).Color = Color3.fromRGB(70, 30, 40)
+Instance.new("UIStroke", search).Color = C_STROKE
 
 local function barBtn(text, xOff, color)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(0, 28, 0, 22)
-    b.Position = UDim2.new(1, xOff, 0, 5)
+    b.Position = UDim2.new(1, xOff, 0, 6)
     b.BackgroundColor3 = color
     b.Text = text
     b.TextColor3 = Color3.new(1, 1, 1)
@@ -258,9 +279,9 @@ local function barBtn(text, xOff, color)
     return b
 end
 local minBtn = barBtn("-", -64, C_OFF)
-local closeBtn = barBtn("X", -32, Color3.fromRGB(200, 50, 50))
+local closeBtn = barBtn("X", -32, C_ACCENT)
 
--- ===== DIALOG TUTUP =====
+-- ===== CLOSE DIALOG =====
 local dlg = Instance.new("Frame")
 dlg.Size = UDim2.new(1, 0, 1, 0)
 dlg.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -280,13 +301,13 @@ dbox.BorderSizePixel = 0
 dbox.ZIndex = 51
 dbox.Parent = dlg
 corner(dbox, 10)
-Instance.new("UIStroke", dbox).Color = Color3.fromRGB(90, 35, 45)
+Instance.new("UIStroke", dbox).Color = C_STROKE
 
 local dtxt = Instance.new("TextLabel")
 dtxt.Size = UDim2.new(1, -20, 0, 50)
 dtxt.Position = UDim2.new(0, 10, 0, 10)
 dtxt.BackgroundTransparency = 1
-dtxt.Text = "Do you want to close this window"
+dtxt.Text = "Do you want to close this window?"
 dtxt.TextColor3 = Color3.new(1, 1, 1)
 dtxt.Font = Enum.Font.GothamBold
 dtxt.TextSize = 13
@@ -308,8 +329,8 @@ local function dlgBtn(text, xScale, xOff, color)
     corner(b, 8)
     return b
 end
-local noBtn = dlgBtn("No", 0, 20, Color3.fromRGB(70, 70, 82))
-local yesBtn = dlgBtn("Yes", 1, -125, Color3.fromRGB(200, 50, 50))
+local noBtn = dlgBtn("No", 0, 20, C_OFF)
+local yesBtn = dlgBtn("Yes", 1, -125, C_ACCENT)
 
 -- ===== DRAG =====
 do
@@ -333,18 +354,20 @@ do
     end))
 end
 
--- ===== IKON MINIMIZE =====
+-- ===== MINIMIZE ICON =====
 local mini = Instance.new("ImageButton")
-mini.Size = UDim2.new(0, 46, 0, 46)
+mini.Size = UDim2.new(0, 48, 0, 48)
 mini.BackgroundColor3 = C_BAR
 mini.AutoButtonColor = false
-mini.Image = ICON_ASSET
+mini.Image = CUSTOM_ICON
 mini.ScaleType = Enum.ScaleType.Crop
-mini.Position = UDim2.new(0, 16, 0.5, -23)
+mini.Position = UDim2.new(0, 16, 0.5, -24)
 mini.Visible = false
 mini.Parent = gui
 corner(mini, 12)
-Instance.new("UIStroke", mini).Color = Color3.fromRGB(230, 60, 85)
+local miniStroke = Instance.new("UIStroke", mini)
+miniStroke.Color = C_ACCENT
+miniStroke.Thickness = 2
 
 local iconPlaced = false
 minBtn.MouseButton1Click:Connect(function()
@@ -380,25 +403,32 @@ do
     end))
 end
 
--- ===== BODY: SIDEBAR + HALAMAN =====
+-- ===== BODY: SIDEBAR + PAGES =====
 local body = Instance.new("Frame")
-body.Size = UDim2.new(1, 0, 1, -32)
-body.Position = UDim2.new(0, 0, 0, 32)
+body.Size = UDim2.new(1, 0, 1, -34)
+body.Position = UDim2.new(0, 0, 0, 34)
 body.BackgroundTransparency = 1
 body.Parent = main
 
 local sidebar = Instance.new("Frame")
-sidebar.Size = UDim2.new(0, 96, 1, 0)
+sidebar.Size = UDim2.new(0, 100, 1, 0)
 sidebar.BackgroundColor3 = C_BAR
 sidebar.BorderSizePixel = 0
 sidebar.Parent = body
+
+local sideLine = Instance.new("Frame")
+sideLine.Size = UDim2.new(0, 1, 1, 0)
+sideLine.Position = UDim2.new(1, -1, 0, 0)
+sideLine.BackgroundColor3 = C_STROKE
+sideLine.BorderSizePixel = 0
+sideLine.Parent = sidebar
 
 local tabList = Instance.new("Frame")
 tabList.Size = UDim2.new(1, 0, 1, -30)
 tabList.BackgroundTransparency = 1
 tabList.Parent = sidebar
 local tl = Instance.new("UIListLayout", tabList)
-tl.Padding = UDim.new(0, 2)
+tl.Padding = UDim.new(0, 3)
 tl.SortOrder = Enum.SortOrder.LayoutOrder
 local tp = Instance.new("UIPadding", tabList)
 tp.PaddingTop = UDim.new(0, 8)
@@ -407,11 +437,11 @@ tp.PaddingRight = UDim.new(0, 6)
 
 local fpsLbl = Instance.new("TextLabel")
 fpsLbl.Size = UDim2.new(1, -12, 0, 16)
-fpsLbl.Position = UDim2.new(0, 6, 1, -22)
+fpsLbl.Position = UDim2.new(0, 8, 1, -22)
 fpsLbl.BackgroundTransparency = 1
 fpsLbl.Text = "-- FPS"
 fpsLbl.TextColor3 = C_GRAY
-fpsLbl.Font = Enum.Font.Gotham
+fpsLbl.Font = Enum.Font.GothamBold
 fpsLbl.TextSize = 10
 fpsLbl.TextXAlignment = Enum.TextXAlignment.Left
 fpsLbl.Parent = sidebar
@@ -431,11 +461,12 @@ end
 local pages, tabs = {}, {}
 local function newPage(name)
     local p = Instance.new("ScrollingFrame")
-    p.Size = UDim2.new(1, -96, 1, 0)
-    p.Position = UDim2.new(0, 96, 0, 0)
+    p.Size = UDim2.new(1, -100, 1, 0)
+    p.Position = UDim2.new(0, 100, 0, 0)
     p.BackgroundTransparency = 1
     p.BorderSizePixel = 0
     p.ScrollBarThickness = 4
+    p.ScrollBarImageColor3 = C_ACCENT
     p.AutomaticCanvasSize = Enum.AutomaticSize.Y
     p.CanvasSize = UDim2.new(0, 0, 0, 0)
     p.Visible = false
@@ -455,16 +486,17 @@ end
 local function setTab(name)
     for n, p in pairs(pages) do p.Visible = (n == name) end
     for n, b in pairs(tabs) do
-        b.BackgroundColor3 = (n == name) and C_ROW or C_BAR
-        b.TextColor3 = (n == name) and Color3.new(1, 1, 1) or C_GRAY
+        local active = (n == name)
+        b.BackgroundColor3 = active and C_ACCENT or C_BAR
+        b.TextColor3 = active and Color3.new(1, 1, 1) or C_GRAY
         local ic = b:FindFirstChildOfClass("ImageLabel")
-        if ic then ic.ImageTransparency = (n == name) and 0 or 0.45 end
+        if ic then ic.ImageTransparency = active and 0 or 0.45 end
     end
 end
 
 local function newTab(name, ord, iconId, label)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 25)
+    b.Size = UDim2.new(1, 0, 0, 26)
     b.Text = label or name
     b.Font = Enum.Font.GothamBold
     b.TextSize = 11
@@ -483,14 +515,22 @@ local function newTab(name, ord, iconId, label)
     b.MouseButton1Click:Connect(function() setTab(name) end)
 end
 
-local tabDefs = { { "Main", ICON_ASSET }, { "Throw", ICON_ASSET, "Farm" }, { "Training", ICON_ASSET },
-    { "Sell", ICON_ASSET }, { "Pet", ICON_ASSET }, { "Event", ICON_ASSET }, { "Chat", ICON_ASSET }, { "Misc", ICON_ASSET } }
+local tabDefs = {
+    { "Main", CUSTOM_ICON },
+    { "Throw", CUSTOM_ICON, "Farm" },
+    { "Training", CUSTOM_ICON },
+    { "Sell", CUSTOM_ICON },
+    { "Pet", CUSTOM_ICON },
+    { "Event", CUSTOM_ICON },
+    { "Chat", CUSTOM_ICON },
+    { "Misc", CUSTOM_ICON }
+}
 for i, t in ipairs(tabDefs) do
     newPage(t[1])
     newTab(t[1], i, t[2], t[3])
 end
 
--- ===== KOMPONEN =====
+-- ===== UI COMPONENTS =====
 local sections = {}
 local function section(page, keyword)
     local f = Instance.new("Frame")
@@ -518,7 +558,7 @@ local function groupTitle(page, text)
     l.Size = UDim2.new(1, 0, 0, 16)
     l.BackgroundTransparency = 1
     l.Text = text
-    l.TextColor3 = Color3.new(1, 1, 1)
+    l.TextColor3 = C_GOOD
     l.Font = Enum.Font.GothamBold
     l.TextSize = 12
     l.TextXAlignment = Enum.TextXAlignment.Left
@@ -624,6 +664,7 @@ local function switchRow(parent, text, desc, key, onChange)
     row.LayoutOrder = nextOrder()
     row.Parent = parent
     corner(row, 8)
+    Instance.new("UIStroke", row).Color = C_STROKE
     Instance.new("UISizeConstraint", row).MinSize = Vector2.new(0, 38)
     textBlock(row, text, desc, -64)
 
@@ -670,6 +711,7 @@ local function infoRow(parent, initial)
     row.LayoutOrder = nextOrder()
     row.Parent = parent
     corner(row, 8)
+    Instance.new("UIStroke", row).Color = C_STROKE
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, -20, 0, 0)
     lbl.AutomaticSize = Enum.AutomaticSize.Y
@@ -696,6 +738,7 @@ local function textBoxRow(parent, titleText, placeholder)
     row.LayoutOrder = nextOrder()
     row.Parent = parent
     corner(row, 8)
+    Instance.new("UIStroke", row).Color = C_STROKE
 
     local t = Instance.new("TextLabel")
     t.Size = UDim2.new(1, -20, 0, 16)
@@ -724,7 +767,6 @@ local function textBoxRow(parent, titleText, placeholder)
     box.TextTruncate = Enum.TextTruncate.AtEnd
     box.Parent = row
     corner(box, 6)
-    Instance.new("UIStroke", box).Color = Color3.fromRGB(70, 30, 40)
     Instance.new("UIPadding", box).PaddingLeft = UDim.new(0, 8)
     return box
 end
@@ -752,6 +794,7 @@ local function buttonsRow(parent, defs)
         b.LayoutOrder = i
         b.Parent = row
         corner(b, 8)
+        Instance.new("UIStroke", b).Color = C_STROKE
         b.MouseButton1Click:Connect(d[2])
     end
 end
@@ -775,6 +818,7 @@ local function makeDropdown(parent, titleText, getItems, onPick)
     head.LayoutOrder = 1
     head.Parent = holder
     corner(head, 8)
+    Instance.new("UIStroke", head).Color = C_STROKE
 
     local tLbl = Instance.new("TextLabel")
     tLbl.Size = UDim2.new(1, -40, 0, 16)
@@ -894,6 +938,7 @@ local function selectSwitchRow(parent, title, desc, options, multi, stateKey, de
     row.LayoutOrder = nextOrder()
     row.Parent = parent
     corner(row, 8)
+    Instance.new("UIStroke", row).Color = C_STROKE
     local rl = Instance.new("UIListLayout", row)
     rl.SortOrder = Enum.SortOrder.LayoutOrder
 
@@ -920,7 +965,6 @@ local function selectSwitchRow(parent, title, desc, options, multi, stateKey, de
     selectBtn.BorderSizePixel = 0
     selectBtn.Parent = top
     corner(selectBtn, 6)
-    Instance.new("UIStroke", selectBtn).Color = Color3.fromRGB(70, 30, 40)
 
     local pill = Instance.new("Frame")
     pill.Size = UDim2.new(0, 40, 0, 20)
@@ -979,7 +1023,7 @@ local function selectSwitchRow(parent, title, desc, options, multi, stateKey, de
 
     local selected = {}
     local marks = {}
-    local C_PICK = Color3.fromRGB(50, 30, 40)
+    local C_PICK = Color3.fromRGB(70, 25, 32)
 
     local function paint(opt, b)
         local on = selected[opt.key] == true
@@ -1051,7 +1095,7 @@ local function selectSwitchRow(parent, title, desc, options, multi, stateKey, de
     return selected
 end
 
--- ===== LOGIKA UMUM =====
+-- ===== CORE GAME LOGIC =====
 local function getHRP()
     return lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
 end
@@ -1131,7 +1175,7 @@ local function trainLoop()
     while alive() do
         if started and os.clock() - lastEvent > SILENT_LIMIT then
             started = false
-            setStatus("Bonus berhenti, cek ulang latihan...", C_WARN)
+            setStatus("Bonus paused, rechecking training...", C_WARN)
         end
 
         if not started then
@@ -1144,22 +1188,22 @@ local function trainLoop()
             elseif reason == "Busy" then
                 started = true
                 lastEvent = os.clock()
-                setStatus("Latihan sudah aktif (Busy)", C_GOOD)
+                setStatus("Training active (Busy)", C_GOOD)
             elseif reason == "TooFar" then
                 if tpToTraining() then
-                    setStatus("Teleport ke lingkaran latihan...", C_GRAY)
+                    setStatus("Teleporting to training spot...", C_GRAY)
                     task.wait(0.6)
                 else
-                    setStatus("Lingkaran latihan tidak ditemukan", C_WARN)
+                    setStatus("Training spot not found", C_WARN)
                     task.wait(RETRY)
                 end
             elseif reason then
-                setStatus("Start ditolak: " .. reason, C_WARN)
+                setStatus("Start rejected: " .. reason, C_WARN)
                 task.wait(RETRY)
             else
                 started = true
                 lastEvent = os.clock()
-                setStatus("Latihan berjalan", C_GOOD)
+                setStatus("Training running", C_GOOD)
             end
         end
         task.wait(1)
@@ -1175,23 +1219,23 @@ local function setTrain(on)
     if on then
         if State.AutoThrow or State.AutoIndex then
             forceOff("AutoTrain")
-            setStatus("Auto Throw lagi nyala, Auto Training dibatalkan", C_WARN)
+            setStatus("Auto Throw is active, Auto Training cancelled", C_WARN)
             return
         end
         if running then return end
         task.spawn(trainLoop)
     else
-        setStatus("Menghentikan latihan...", C_GRAY)
+        setStatus("Stopping training...", C_GRAY)
         task.spawn(function()
             local t0 = os.clock()
             while running and os.clock() - t0 < 5 do task.wait(0.1) end
             stopTraining()
-            setStatus("Latihan berhenti", C_GRAY)
+            setStatus("Training stopped", C_GRAY)
         end)
     end
 end
 
--- ===== LOOP UMUM =====
+-- ===== GENERAL LOOPS =====
 local loops = {}
 
 local function summarize(res)
@@ -1250,16 +1294,16 @@ local function upgradeBar()
     end
 end
 
--- ===== MAKANAN =====
-local foodNext = 1       
-local foodBest = 0       
+-- ===== FOOD =====
+local foodNext = 1
+local foodBest = 0
 local foodEquipped = 0
 
 local function buyFood()
     for _ = 1, 80 do
         if not State.AutoBuyFood then return end
         if foodNext > FOOD_MAX then
-            setStatus("Buy Food: sudah mencapai batas indeks", C_GRAY)
+            setStatus("Buy Food: reached max index", C_GRAY)
             return
         end
         local okB, res = pcall(function() return R.Shop_Buy:InvokeServer(foodNext) end)
@@ -1270,7 +1314,7 @@ local function buyFood()
         local reason = (typeof(res) == "table" and res.Ok == false) and tostring(res.Reason):lower() or nil
         if not reason then
             foodBest = math.max(foodBest, foodNext)
-            setStatus("Beli makanan #" .. foodNext .. " berhasil", C_GOOD)
+            setStatus("Bought food #" .. foodNext, C_GOOD)
             foodNext += 1
             task.wait(0.3)
         elseif reason:find("owned") or reason:find("already") or reason:find("bought") then
@@ -1285,7 +1329,7 @@ local function buyFood()
 end
 
 local function equipBestFood()
-    if State.AutoIndex then return end 
+    if State.AutoIndex then return end
     if foodBest <= 0 then
         for i = FOOD_MAX, 1, -1 do
             if not State.AutoEquipFood then return end
@@ -1294,12 +1338,12 @@ local function equipBestFood()
             if okE and (not reason or reason:find("already")) then
                 foodBest = i
                 foodEquipped = i
-                setStatus("Makanan terbaik #" .. i .. " dipakai", C_GOOD)
+                setStatus("Best food #" .. i .. " equipped", C_GOOD)
                 return
             end
             task.wait(0.08)
         end
-        setStatus("Equip Food: tidak ada makanan yang bisa di-equip", C_WARN)
+        setStatus("Equip Food: no food available", C_WARN)
         return
     end
 
@@ -1307,13 +1351,13 @@ local function equipBestFood()
     local okE, res = pcall(function() return R.Shop_Equip:InvokeServer(foodBest) end)
     if okE and not (typeof(res) == "table" and res.Ok == false) then
         foodEquipped = foodBest
-        setStatus("Equip makanan #" .. foodBest, C_GOOD)
+        setStatus("Equipped food #" .. foodBest, C_GOOD)
     else
         setStatus("Equip Food #" .. foodBest .. ": " .. summarize(res), C_WARN)
     end
 end
 
--- ===== AUTO THROW =====
+-- ===== AUTO THROW (PERFECT THROW) =====
 local function getThrowLine()
     local area = workspace:FindFirstChild("StarterArea")
     return area and area:FindFirstChild("CrossLine")
@@ -1343,7 +1387,7 @@ local function tpToThrow(useSaved)
     return false
 end
 
--- ===== POP UP HEWAN =====
+-- ===== ANIMAL POPUP =====
 local popupHolder = Instance.new("Frame")
 popupHolder.Name = "PopupHewan"
 popupHolder.BackgroundTransparency = 1
@@ -1460,7 +1504,7 @@ local function popGambar(parent, src, z)
     local vp
     local ok = pcall(function()
         local m = src:Clone()
-        if not m then error("clone gagal") end
+        if not m then error("clone failed") end
         for _, d in ipairs(m:GetDescendants()) do
             if d:IsA("BaseScript") or d:IsA("BillboardGui") or d:IsA("SurfaceGui") then
                 d:Destroy()
@@ -1543,7 +1587,7 @@ local function popupHewan(r)
     f.Parent = w
     corner(f, 8)
     local st = Instance.new("UIStroke", f)
-    st.Color = Color3.fromRGB(130, 45, 60)
+    st.Color = C_STROKE
     st.Thickness = 2
 
     local img = Instance.new("Frame")
@@ -1556,7 +1600,7 @@ local function popupHewan(r)
     local garis = Instance.new("Frame")
     garis.Size = UDim2.new(0, 1, 1, 0)
     garis.Position = UDim2.new(0, 76, 0, 0)
-    garis.BackgroundColor3 = Color3.fromRGB(130, 45, 60)
+    garis.BackgroundColor3 = C_STROKE
     garis.BorderSizePixel = 0
     garis.ZIndex = 53
     garis.Parent = f
@@ -1669,7 +1713,7 @@ local tooFarStreak = 0
 local function doThrow()
     local s = R.Throw_Start:InvokeServer()
     if typeof(s) ~= "table" then
-        setStatus("Start: balasan tidak dikenal", C_WARN)
+        setStatus("Start: unknown response", C_WARN)
         task.wait(2)
         return
     end
@@ -1679,18 +1723,18 @@ local function doThrow()
         if why == "TooFar" then
             tooFarStreak += 1
             if tooFarStreak >= 6 then
-                setStatus("TooFar terus: cek garis lempar", C_WARN)
+                setStatus("TooFar repeated: check throw line", C_WARN)
                 tooFarStreak = 0
                 task.wait(5)
             elseif tpToThrow(tooFarStreak >= 3) then
-                setStatus("TooFar, balik ke posisi lempar...", C_GRAY)
+                setStatus("TooFar, returning to throw line...", C_GRAY)
                 task.wait(0.6)
             else
-                setStatus("TooFar: posisi lempar tidak ditemukan", C_WARN)
+                setStatus("TooFar: throw position not found", C_WARN)
                 task.wait(2)
             end
         elseif why == "Busy" then
-            setStatus("Busy, reset sesi lempar", C_WARN)
+            setStatus("Busy, resetting throw session", C_WARN)
             pcall(function() R.Throw_Complete:InvokeServer() end)
             task.wait(0.5)
             pcall(function() R.Throw_Cancel:InvokeServer() end)
@@ -1698,7 +1742,7 @@ local function doThrow()
         elseif why == "Cooldown" then
             task.wait(0.5)
         else
-            setStatus("Start ditolak: " .. why, C_WARN)
+            setStatus("Start rejected: " .. why, C_WARN)
             task.wait(2)
         end
         return
@@ -1712,28 +1756,16 @@ local function doThrow()
 
     local r = R.Throw_Resolve:InvokeServer(THROW_ACCURACY)
     if typeof(r) ~= "table" or not r.Ok then
-        setStatus("Resolve gagal", C_WARN)
+        setStatus("Resolve failed", C_WARN)
         pcall(function() R.Throw_Cancel:InvokeServer() end)
         task.wait(2)
         return
     end
 
     throws += 1
-    setStatus(("Lempar #%d: %s (%s)"):format(throws, tostring(r.DisplayName), tostring(r.Rarity)), C_GOOD)
+    setStatus(("Throw #%d: %s (%s)"):format(throws, tostring(r.DisplayName), tostring(r.Rarity)), C_GOOD)
     pcall(popupHewan, r)
     if getgenv().__TFAWebhook then pcall(getgenv().__TFAWebhook, r) end
-    if DEBUG_RESOLVE then
-        pcall(function()
-            local f = {}
-            for k, v in pairs(r) do f[#f + 1] = tostring(k) .. "=" .. tostring(v) end
-            table.sort(f)
-            local log = getgenv().__ResolveLog or {}
-            table.insert(log, table.concat(f, ", "))
-            while #log > 6 do table.remove(log, 1) end
-            getgenv().__ResolveLog = log
-            if setclipboard then setclipboard(table.concat(log, "\n")) end
-        end)
-    end
 
     task.wait((tonumber(r.FlightTime) or 6) + THROW_EXTRA)
 
@@ -1746,13 +1778,13 @@ local function doThrow()
     while not done and os.clock() - t0 < 3 do task.wait(0.1) end
 
     task.wait(0.5)
-    tpToThrow()   
+    tpToThrow()
 end
 
 local function throwLoop()
     throwing = true
     if tpToThrow() then
-        setStatus("Teleport ke garis lempar...", C_GRAY)
+        setStatus("Teleporting to throw line...", C_GRAY)
         task.wait(0.5)
     end
     while (State.AutoThrow or State.AutoIndex) and not throwPause and getgenv().__ThrowToken == myToken do
@@ -1770,28 +1802,28 @@ local function setThrow(on)
     if on then
         if State.AutoTrain then
             forceOff("AutoThrow")
-            setStatus("Auto Training lagi nyala, Auto Throw dibatalkan", C_WARN)
+            setStatus("Auto Training is on, Auto Throw cancelled", C_WARN)
             return
         end
         if State.AutoIndex then
             forceOff("AutoThrow")
-            setStatus("Auto Index lagi nyala, Auto Throw dibatalkan", C_WARN)
+            setStatus("Auto Index is on, Auto Throw cancelled", C_WARN)
             return
         end
         if throwing then return end
         task.spawn(throwLoop)
     else
-        setStatus("Menghentikan lempar...", C_GRAY)
+        setStatus("Stopping throw...", C_GRAY)
         task.spawn(function()
             local t0 = os.clock()
             while throwing and os.clock() - t0 < 12 do task.wait(0.2) end
             restoreLook()
-            setStatus("Lempar berhenti", C_GRAY)
+            setStatus("Throw stopped", C_GRAY)
         end)
     end
 end
 
--- ===== INVISIBLE =====
+-- ===== VISUAL: INVISIBLE =====
 local setInvisible
 do
     local origVal = setmetatable({}, { __mode = "k" })
@@ -1855,7 +1887,7 @@ do
     local entries = {}
     local conns = {}
     local running = false
-    local ESP_COLOR = Color3.fromRGB(235, 50, 75)
+    local ESP_COLOR = Color3.fromRGB(230, 50, 70)
 
     local function hapus(plr)
         local e = entries[plr]
@@ -1876,7 +1908,7 @@ do
         local hl = Instance.new("Highlight")
         hl.Adornee = char
         hl.FillColor = ESP_COLOR
-        hl.FillTransparency = 0.75
+        hl.FillTransparency = 0.7
         hl.OutlineColor = Color3.new(1, 1, 1)
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.Parent = folder
@@ -1944,7 +1976,7 @@ do
     end
 end
 
--- ===== ANTI AFK, AUTO EXECUTE =====
+-- ===== ANTI AFK & AUTO EXECUTE =====
 local function setAntiAfk(on)
     if getgenv().__AfkConn then
         pcall(function() getgenv().__AfkConn:Disconnect() end)
@@ -1983,11 +2015,23 @@ end
 
 local function buildQueued()
     local files = {}
+    for _, f in ipairs(SCRIPT_FILES) do files[#files + 1] = string.format("%q", SCRIPT_BASE .. f) end
     return table.concat({
         'if not (isfile and isfile("' .. AUTOEXEC_FLAG .. '") and readfile("' .. AUTOEXEC_FLAG .. '") == "1") then return end',
         'getgenv().ThrowAutoStart = true',
         'if not game:IsLoaded() then game.Loaded:Wait() end',
         'task.wait(3)',
+        'local urls = {' .. table.concat(files, ", ") .. '}',
+        'for _, u in ipairs(urls) do',
+        '    local ok, src = pcall(function() return game:HttpGet(u) end)',
+        '    if ok and type(src) == "string" and #src > 2000 then',
+        '        local fn = loadstring(src)',
+        '        if fn then',
+        '            fn()',
+        '            return',
+        '        end',
+        '    end',
+        'end',
     }, "\n")
 end
 
@@ -1996,7 +2040,7 @@ local function setAutoExec(on, awal)
     if not on then
         if not awal then
             tulisFlag(false)
-            execInfo("Auto Execute mati", C_GRAY)
+            execInfo("Auto Execute disabled", C_GRAY)
         end
         return
     end
@@ -2004,7 +2048,7 @@ local function setAutoExec(on, awal)
     local qot = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
     if not qot then
         forceOff("AutoExec")
-        execInfo("Executor tidak mendukung queue_on_teleport", C_WARN)
+        execInfo("Executor does not support queue_on_teleport", C_WARN)
         return
     end
 
@@ -2013,7 +2057,7 @@ local function setAutoExec(on, awal)
         local okQ, errQ = pcall(qot, buildQueued())
         if not okQ then
             forceOff("AutoExec")
-            execInfo("Gagal mendaftarkan Auto Execute: " .. tostring(errQ), C_WARN)
+            execInfo("Failed to register Auto Execute: " .. tostring(errQ), C_WARN)
             return
         end
         queuedThisRun = true
@@ -2026,16 +2070,17 @@ local function setAutoExec(on, awal)
             task.wait(5)
         end
     end)
-    execInfo("Auto Execute aktif", C_GOOD)
+    execInfo("Auto Execute active", C_GOOD)
 end
 
--- ===== ISI HALAMAN =====
+-- ===== PAGE CONTENTS =====
 -- MAIN
 do
     local p = pages.Main
 
     groupTitle(p, "Welcome")
 
+    -- ACCOUNT INFO
     do
         local Stats = game:GetService("Stats")
 
@@ -2052,7 +2097,7 @@ do
         row.LayoutOrder = nextOrder()
         row.Parent = sAcc
         corner(row, 8)
-        Instance.new("UIStroke", row).Color = Color3.fromRGB(70, 30, 40)
+        Instance.new("UIStroke", row).Color = C_STROKE
 
         local avatar = Instance.new("ImageLabel")
         avatar.Size = UDim2.new(0, 60, 0, 60)
@@ -2096,7 +2141,7 @@ do
             local tagLbl = Instance.new("TextLabel")
             tagLbl.Size = UDim2.new(0, 0, 0, 16)
             tagLbl.AutomaticSize = Enum.AutomaticSize.X
-            tagLbl.BackgroundColor3 = Color3.fromRGB(220, 45, 65)
+            tagLbl.BackgroundColor3 = C_ACCENT
             tagLbl.Text = " " .. ownerLabel .. " "
             tagLbl.TextColor3 = Color3.new(1, 1, 1)
             tagLbl.Font = Enum.Font.GothamBold
@@ -2125,7 +2170,7 @@ do
             f.BorderSizePixel = 0
             f.Parent = row
             corner(f, 13)
-            Instance.new("UIStroke", f).Color = Color3.fromRGB(70, 30, 40)
+            Instance.new("UIStroke", f).Color = C_STROKE
             local l = Instance.new("TextLabel")
             l.Size = UDim2.new(1, 0, 1, 0)
             l.BackgroundTransparency = 1
@@ -2170,10 +2215,9 @@ do
         cell.Position = pos
         cell.BackgroundColor3 = C_ROW
         cell.BorderSizePixel = 0
-        cell.Parent = cell
         cell.Parent = statRow
         corner(cell, 8)
-        Instance.new("UIStroke", cell).Color = Color3.fromRGB(70, 30, 40)
+        Instance.new("UIStroke", cell).Color = C_STROKE
         local ic = Instance.new("ImageLabel")
         ic.Size = UDim2.new(0, 16, 0, 16)
         ic.Position = UDim2.new(0, 8, 0.5, -8)
@@ -2192,14 +2236,15 @@ do
         lbl.Parent = cell
         return lbl
     end
-    usersLbl = statCell(UDim2.new(0, 0, 0, 0), UDim2.new(0.5, -3, 1, 0), ICON_ASSET, "User : -")
-    onlineLbl = statCell(UDim2.new(0.5, 3, 0, 0), UDim2.new(0.5, -3, 1, 0), ICON_ASSET, "Online : -")
+    usersLbl = statCell(UDim2.new(0, 0, 0, 0), UDim2.new(0.5, -3, 1, 0), CUSTOM_ICON, "User : -")
+    onlineLbl = statCell(UDim2.new(0.5, 3, 0, 0), UDim2.new(0.5, -3, 1, 0), CUSTOM_ICON, "Online : -")
 
+    groupTitle(p, "Statistics")
     local s3 = section(p, "statistik tap")
     statsLbl = infoRow(s3, "Tap: 0  |  Extra Reps: 0  |  ID: 0")
 end
 
--- THROW
+-- THROW (FARM)
 do
     local p = pages.Throw
 
@@ -2227,12 +2272,13 @@ do
 
     groupTitle(p, "Throw")
     local s1 = section(p, "auto throw lempar makanan")
-    switchRow(s1, "Auto Throw", "Throws food automatically", "AutoThrow", setThrow)
+    switchRow(s1, "Auto Throw (Perfect Throw)", "Throws food automatically with 100% accuracy", "AutoThrow", setThrow)
 
+    -- Throw Power per area
     do
         local AREAS = {}
         local idx = 1
-        local MARGIN = 20 
+        local MARGIN = 20
         local okAC, ACfg = pcall(function() return game:GetService("ReplicatedStorage").Config.AreasConfig end)
         if okAC then okAC, ACfg = pcall(require, ACfg) end
 
@@ -2265,14 +2311,9 @@ do
             return ACfg.List[i].Name:upper()
         end
 
-        local function sliderBody()
-            local hud = lp.PlayerGui:FindFirstChild("HUD")
-            local ps = hud and hud:FindFirstChild("PowerSlider")
-            return ps and ps:FindFirstChild("Body")
-        end
         local function readMax() return bacaMax() end
 
-        local sP = section(p, "throw power kekuatan lempar")
+        local sP = section(p, "throw power kekuatan lempar area forest")
 
         local prow = Instance.new("Frame")
         prow.Size = UDim2.new(1, 0, 0, 40)
@@ -2281,7 +2322,7 @@ do
         prow.LayoutOrder = nextOrder()
         prow.Parent = sP
         corner(prow, 8)
-        Instance.new("UIStroke", prow).Color = Color3.fromRGB(70, 30, 40)
+        Instance.new("UIStroke", prow).Color = C_STROKE
 
         local ptitle = Instance.new("TextLabel")
         ptitle.Size = UDim2.new(1, -20, 0, 16)
@@ -2313,7 +2354,7 @@ do
         crow.LayoutOrder = nextOrder()
         crow.Parent = sP
         corner(crow, 8)
-        Instance.new("UIStroke", crow).Color = Color3.fromRGB(70, 30, 40)
+        Instance.new("UIStroke", crow).Color = C_STROKE
 
         local function mk(cls, pos, size, text, color)
             local b = Instance.new(cls)
@@ -2331,7 +2372,7 @@ do
         local prevBtn = mk("TextButton", UDim2.new(0, 8, 0.5, -12), UDim2.new(0, 28, 0, 24), "<", C_BG)
         local areaLbl = mk("TextLabel", UDim2.new(0, 40, 0.5, -12), UDim2.new(1, -134, 0, 24), "", C_BG)
         local nextBtn = mk("TextButton", UDim2.new(1, -90, 0.5, -12), UDim2.new(0, 28, 0, 24), ">", C_BG)
-        local setBtn = mk("TextButton", UDim2.new(1, -58, 0.5, -12), UDim2.new(0, 46, 0, 24), "Set", Color3.fromRGB(220, 45, 65))
+        local setBtn = mk("TextButton", UDim2.new(1, -58, 0.5, -12), UDim2.new(0, 46, 0, 24), "Set", C_ACCENT)
 
         local function refresh()
             local a = AREAS[idx]
@@ -2356,14 +2397,14 @@ do
         setBtn.MouseButton1Click:Connect(function()
             if busy then return end
             busy = true
-            local nama, val = AREAS[idx][1], AREAS[idx][2]
+            local val = AREAS[idx][2]
             pinfo.Text = "Sending..."
             pinfo.TextColor3 = C_GRAY
             task.spawn(function()
                 local mx = readMax()
                 if val == "MAX" then
                     if not mx then
-                        pinfo.Text = "Can't read max power"
+                        pinfo.Text = "Can't read max power, open the Throw Power slider"
                         pinfo.TextColor3 = C_WARN
                         busy = false
                         return
@@ -2407,15 +2448,16 @@ do
         end)
     end
 
+    -- Auto Index
     groupTitle(p, "Index")
     do
         local RS = game:GetService("ReplicatedStorage")
         local DC, AC, eco
-        local MARGIN = 20         
-        local THROWS_PER_TRY = 20 
-        local STUCK_THROWS = 300  
+        local MARGIN = 20
+        local THROWS_PER_TRY = 20
+        local STUCK_THROWS = 300
 
-        local ULANG_PER_TIER = 1 
+        local ULANG_PER_TIER = 1
         local LEMPAR_PER_MAKANAN = 15
         local polaIdx, lastFoodTh, failFood = 0, nil, 0
         local foodSekarang, foodAwal = nil, nil
@@ -2485,7 +2527,7 @@ do
         end
 
         local setIndex
-        local indexRun = nil
+        local indexRun = 0
         local function aktif(token)
             return State.AutoIndex and indexRun == token and getgenv().__ThrowToken == myToken
         end
@@ -2517,38 +2559,9 @@ do
             end
         end)
 
-        local irow = Instance.new("Frame")
-        irow.Size = UDim2.new(1, 0, 0, 26)
-        irow.BackgroundColor3 = C_ROW
-        irow.BorderSizePixel = 0
-        irow.LayoutOrder = nextOrder()
-        irow.Parent = sI
-        irow.Visible = TAMPILKAN_STATUS
-        if not TAMPILKAN_STATUS then irow.Size = UDim2.new(1, 0, 0, 0) end
-        corner(irow, 8)
-        Instance.new("UIStroke", irow).Color = Color3.fromRGB(70, 30, 40)
-        local ilbl = Instance.new("TextLabel")
-        ilbl.Size = UDim2.new(1, -20, 1, 0)
-        ilbl.Position = UDim2.new(0, 10, 0, 0)
-        ilbl.BackgroundTransparency = 1
-        ilbl.Text = "Auto Index belum dijalankan"
-        ilbl.TextColor3 = C_GRAY
-        ilbl.Font = Enum.Font.Gotham
-        ilbl.TextSize = 9
-        ilbl.TextXAlignment = Enum.TextXAlignment.Left
-        ilbl.TextTruncate = Enum.TextTruncate.AtEnd
-        ilbl.Parent = irow
-
-        local function info(t, color)
-            ilbl.Text = t
-            ilbl.TextColor3 = color or C_GRAY
-        end
-
         local function muat()
             if DC and AC and eco then return true end
-
-            local function ambil(label, getter)
-                info("Memuat " .. label .. "...", C_GRAY)
+            local function ambil(getter)
                 local obj
                 local t0 = os.clock()
                 while os.clock() - t0 < 20 do
@@ -2556,10 +2569,7 @@ do
                     if ok and o then obj = o break end
                     task.wait(0.5)
                 end
-                if not obj then
-                    info(label .. " tidak ditemukan", C_WARN)
-                    return nil
-                end
+                if not obj then return nil end
                 local hasil, selesai = nil, false
                 task.spawn(function()
                     local ok, m = pcall(require, obj)
@@ -2568,17 +2578,14 @@ do
                 end)
                 local t1 = os.clock()
                 while not selesai and os.clock() - t1 < 15 do task.wait(0.2) end
-                if not hasil then info(label .. " gagal dimuat", C_WARN) end
                 return hasil
             end
 
-            DC = DC or ambil("DataController", function()
-                return lp.PlayerScripts.Client.Controllers.DataController
-            end)
+            DC = DC or ambil(function() return lp.PlayerScripts.Client.Controllers.DataController end)
             if not DC then return false end
-            AC = AC or ambil("AreasConfig", function() return RS.Config.AreasConfig end)
+            AC = AC or ambil(function() return RS.Config.AreasConfig end)
             if not AC then return false end
-            eco = eco or ambil("AnimalEconomy", function() return RS.Config.AnimalEconomy end)
+            eco = eco or ambil(function() return RS.Config.AnimalEconomy end)
             return (DC and AC and eco) and true or false
         end
 
@@ -2636,7 +2643,7 @@ do
         local function setPower(v)
             local okc, res = pcall(function() return R.Player_SetThrowPower:InvokeServer(v) end)
             if not okc then return false, "remote error" end
-            if typeof(res) ~= "table" then return false, "balasan " .. tostring(res) end
+            if typeof(res) ~= "table" then return false, "invalid reply" end
             if res.Ok == false then return false, tostring(res.Reason) end
             local pw = tonumber(res.Power) or 0
             if pw <= 0 then return false, "power 0" end
@@ -2663,7 +2670,7 @@ do
             if aktif(token) and not throwing then task.spawn(throwLoop) end
             pausing = false
             if ok then return true, hasil end
-            setPower(26) 
+            setPower(26)
             return false, hasil or alasan
         end
 
@@ -2672,25 +2679,23 @@ do
             local stuckBatas = math.clamp(#cands * THROWS_PER_TRY, STUCK_THROWS, 800)
             local sisa = #miss
             local d0 = ambilData()
-            local lastGain = d0 and tonumber(d0.Throws) or 0 
+            local lastGain = d0 and tonumber(d0.Throws) or 0
             local ci, gagal = 0, 0
             while aktif(token) do
                 ci = ci % #cands + 1
                 local pwr = cands[ci]
-                local okP, hasilP = false, "melebihi power maksimal"
-                if pwr < maxP then okP, hasilP = pasangPower(pwr, token) end
+                local okP = false
+                if pwr < maxP then okP = pasangPower(pwr, token) end
                 if not aktif(token) then return nil end
                 if okP then
                     gagal = 0
-                    info(a.Name .. ": power " .. tostring(hasilP) .. " | kurang " .. sisa, C_GRAY)
                     local d1 = ambilData()
                     local mulai = d1 and tonumber(d1.Throws) or lastGain
-                    local lastTh, gerak, tCand = mulai, os.clock(), os.clock()
+                    local lastTh, tCand = mulai, os.clock()
                     while aktif(token) do
                         task.wait(1)
                         if State.AutoTrain then
                             applyState("AutoIndex", false)
-                            info("Auto Training menyala, Auto Index dihentikan", C_WARN)
                             return nil
                         end
                         if not throwing and not pausing then task.spawn(throwLoop) end
@@ -2704,25 +2709,16 @@ do
                                 lastGain = th
                                 mulai = th
                                 tCand = os.clock()
-                                info(a.Name .. ": hewan baru, kurang " .. sisa, C_GOOD)
                                 if sisa == 0 then return true end
                             end
-                            if th > lastTh then
-                                lastTh = th
-                                gerak = os.clock()
-                            end
+                            if th > lastTh then lastTh = th end
                             if th - lastGain >= stuckBatas then return false end
                             if th - mulai >= THROWS_PER_TRY then break end
-                        end
-                        if os.clock() - gerak > 120 then
-                            info(a.Name .. ": lemparan tidak jalan", C_WARN)
-                            gerak = os.clock()
                         end
                         if os.clock() - tCand > 180 then break end
                     end
                 else
                     gagal = gagal + 1
-                    info(a.Name .. ": gagal set power", C_WARN)
                     if gagal >= #cands then return false end
                     task.wait(1)
                 end
@@ -2731,79 +2727,55 @@ do
         end
 
         local function loopIndex(token)
-            info("Memuat data game...", C_GRAY)
             if not muat() then
                 if State.AutoIndex then applyState("AutoIndex", false) end
-                info("Data game tidak terbaca", C_WARN)
                 return
             end
-            info("Data game siap", C_GRAY)
             local lewat = {}
-            local jalan = false
             while aktif(token) do
-                jalan = true
-                info("Membaca data pemain...", C_GRAY)
                 local data = ambilData()
                 if not data then
-                    info("Data pemain belum siap...", C_GRAY)
                     task.wait(3)
                 else
                     local idxT = data.Index or {}
                     local maxP = bacaMax(data)
                     if not maxP then
                         applyState("AutoIndex", false)
-                        info("Power maksimal tidak terbaca", C_WARN)
                         return
                     end
                     local target, miss
-                    local punya, semua = 0, 0
-                    info("Menghitung Index...", C_GRAY)
                     for _, a in ipairs(AC.List) do
-                        local m, tot = kurang(a, idxT)
-                        semua = semua + tot
-                        punya = punya + (tot - #m)
+                        local m = kurang(a, idxT)
                         if not target and #m > 0 and not lewat[a.Key] and a.StartDistance < maxP then
                             target, miss = a, m
                         end
                     end
                     if not target then
-                        local n = 0
-                        for _ in pairs(lewat) do n = n + 1 end
                         applyState("AutoIndex", false)
-                        info("Selesai: Index " .. punya .. "/" .. semua, C_GOOD)
                         return
                     end
-                    info("Index " .. punya .. "/" .. semua .. " | target " .. target.Name, C_GRAY)
                     local hasil = farmArea(target, miss, maxP, token)
                     if hasil == false then lewat[target.Key] = true end
                 end
             end
-            if not jalan then info("Auto Index berhenti sebelum jalan", C_WARN) end
         end
 
         setIndex = function(on)
-            indexRun = tick()
-            local token = indexRun
+            indexRun = indexRun + 1
             if on then
                 if State.AutoTrain then
                     forceOff("AutoIndex")
-                    info("Matikan Auto Training dulu", C_WARN)
                     return
                 end
                 if State.AutoThrow then forceOff("AutoThrow") end
                 local d0 = ambilData()
                 foodAwal = d0 and tonumber(d0.EquippedFood) or nil
                 foodSekarang, polaIdx, lastFoodTh, failFood = nil, 0, nil, 0
-                info("Memulai Auto Index...", C_GRAY)
-                task.spawn(function()
-                    local ok, err = pcall(function() loopIndex(token) end)
-                    if not ok then
-                        if State.AutoIndex then applyState("AutoIndex", false) end
-                        info("Error: " .. tostring(err), C_WARN)
-                    end
-                end)
+                task.spawn(function(token)
+                    local ok = pcall(loopIndex, token)
+                    if not ok and State.AutoIndex then applyState("AutoIndex", false) end
+                end, indexRun)
             else
-                info("Auto Index berhenti", C_GRAY)
                 task.spawn(function()
                     local t0 = os.clock()
                     while throwing and os.clock() - t0 < 12 do task.wait(0.2) end
@@ -2844,6 +2816,7 @@ do
     end)
 end
 
+-- ===== PET & SELL =====
 local petBusy = false
 local function petCall(remoteName, label)
     while petBusy do task.wait(0.2) end
@@ -2857,7 +2830,7 @@ do
     local p = pages.Sell
     groupTitle(p, "Sell")
     local s1 = section(p, "auto sell jual")
-    switchRow(s1, "Auto Sell", "Sells small animals every 60s", "AutoSell", function(on)
+    switchRow(s1, "Auto Sell", "Sells small animals every 60s (pen is safe)", "AutoSell", function(on)
         if on then
             startFnLoop("AutoSell", SELL_EVERY, function()
                 if State.AutoEquip then
@@ -2890,7 +2863,7 @@ do
     end)
 end
 
--- EVENT
+-- EVENT (Dreamland)
 do
     local p = pages.Event
     local RSE = game:GetService("ReplicatedStorage")
@@ -2904,7 +2877,7 @@ do
         { key = "TrainingBoost", label = "2x Training" },
         { key = "DreamPotion", label = "Dream Potion" },
     }
-    local buySelected = selectSwitchRow(sd, "Auto Buy Event", "Buys selected shop items when available",
+    local buySelected = selectSwitchRow(sd, "Auto Buy Event", "Buys the selected shop items when available",
         buyOptions, true, "AutoBuyEvent", "Select Item", function(on) State.AutoBuyEvent = on end)
 
     task.spawn(function()
@@ -2948,7 +2921,7 @@ do
         { key = 1, label = "1x" }, { key = 2, label = "2x" },
         { key = 3, label = "3x" }, { key = 4, label = "4x" },
     }
-    local infuseSelected = selectSwitchRow(sd, "Auto Infuse", "Infuses your highest-income animal",
+    local infuseSelected = selectSwitchRow(sd, "Auto Infuse", "Infuses your highest-income animal using Dream Potions",
         infuseOptions, false, "AutoInfuse", "1x", function(on) State.AutoInfuse = on end)
 
     local function cariPlotSendiri()
@@ -3005,10 +2978,10 @@ end
 do
     local p = pages.Chat
     local CHAT_URL = "https://tfa-chat-default-rtdb.asia-southeast1.firebasedatabase.app/chat"
-    local CHAT_MAX = 150      
-    local CHAT_COOLDOWN = 2   
-    local CHAT_POLL = 3       
-    local CHAT_KEEP = 60      
+    local CHAT_MAX = 150
+    local CHAT_COOLDOWN = 2
+    local CHAT_POLL = 3
+    local CHAT_KEEP = 60
     local req = request or http_request or (syn and syn.request) or (http and http.request)
 
     groupTitle(p, "Live Chat")
@@ -3021,7 +2994,7 @@ do
     box.LayoutOrder = nextOrder()
     box.Parent = sc
     corner(box, 8)
-    Instance.new("UIStroke", box).Color = Color3.fromRGB(70, 30, 40)
+    Instance.new("UIStroke", box).Color = C_STROKE
 
     local feed = Instance.new("ScrollingFrame")
     feed.Size = UDim2.new(1, -8, 1, -8)
@@ -3062,13 +3035,13 @@ do
     input.TextTruncate = Enum.TextTruncate.AtEnd
     input.Parent = inputRow
     corner(input, 8)
-    Instance.new("UIStroke", input).Color = Color3.fromRGB(70, 30, 40)
+    Instance.new("UIStroke", input).Color = C_STROKE
     Instance.new("UIPadding", input).PaddingLeft = UDim.new(0, 10)
 
     local sendBtn = Instance.new("TextButton")
     sendBtn.Size = UDim2.new(0, 56, 1, 0)
     sendBtn.Position = UDim2.new(1, -56, 0, 0)
-    sendBtn.BackgroundColor3 = C_ON
+    sendBtn.BackgroundColor3 = C_ACCENT
     sendBtn.Text = "Send"
     sendBtn.TextColor3 = Color3.new(1, 1, 1)
     sendBtn.Font = Enum.Font.GothamBold
@@ -3125,29 +3098,11 @@ do
         nm.AutomaticSize = Enum.AutomaticSize.X
         nm.BackgroundTransparency = 1
         nm.Text = name
-        nm.TextColor3 = mine and C_GOOD or Color3.fromRGB(108, 180, 255)
+        nm.TextColor3 = mine and C_GOOD or Color3.fromRGB(220, 140, 150)
         nm.Font = Enum.Font.GothamBold
         nm.TextSize = 11
         nm.LayoutOrder = 1
         nm.Parent = head
-
-        if uid and OWNER_IDS[uid] then
-            local tag = Instance.new("TextLabel")
-            tag.Size = UDim2.new(0, 0, 0, 14)
-            tag.AutomaticSize = Enum.AutomaticSize.X
-            tag.BackgroundColor3 = Color3.fromRGB(220, 50, 70)
-            tag.BorderSizePixel = 0
-            tag.Text = "OWNER"
-            tag.TextColor3 = Color3.new(1, 1, 1)
-            tag.Font = Enum.Font.GothamBold
-            tag.TextSize = 10
-            tag.LayoutOrder = 2
-            tag.Parent = head
-            corner(tag, 4)
-            local tp = Instance.new("UIPadding", tag)
-            tp.PaddingLeft = UDim.new(0, 5)
-            tp.PaddingRight = UDim.new(0, 5)
-        end
 
         local msg = Instance.new("TextLabel")
         msg.Size = UDim2.new(1, 0, 0, 0)
@@ -3173,7 +3128,24 @@ do
         end
     end
 
-    if req then
+    local function info(text)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, 0, 0, 14)
+        l.BackgroundTransparency = 1
+        l.Text = text
+        l.TextColor3 = C_GRAY
+        l.Font = Enum.Font.Gotham
+        l.TextSize = 10
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.LayoutOrder = 0
+        l.Parent = feed
+    end
+
+    if not req then
+        info("Your executor does not support HTTP requests")
+        input.TextEditable = false
+        sendBtn.BackgroundColor3 = C_OFF
+    else
         local seen = {}
         local first = true
         local busy = false
@@ -3221,12 +3193,13 @@ do
             text = text:sub(1, CHAT_MAX)
             input.Text = ""
             task.spawn(function()
-                pcall(req, {
+                local ok = pcall(req, {
                     Url = CHAT_URL .. ".json",
                     Method = "POST",
                     Headers = { ["Content-Type"] = "application/json" },
                     Body = HttpService:JSONEncode({ n = lp.DisplayName, t = text, u = lp.UserId }),
                 })
+                if not ok then info("Message failed to send") end
                 poll()
             end)
         end
@@ -3448,7 +3421,7 @@ do
             end
             local n = parseNilai(t)
             if not n then
-                notif("Webhook", "Invalid Min. Value")
+                notif("Webhook", "Invalid Min. Value, example: 500K or 1.5M")
                 minBox.Text = cfg.min
                 return
             end
@@ -3477,14 +3450,11 @@ do
 
             local varian, ukuran = popBaca(r)
             local rarity = tostring(r.Rarity or "?")
-            local c = POP_RARITY[rarity:lower()]
-            local warna = c and (math.floor(c.R * 255) * 65536 + math.floor(c.G * 255) * 256 + math.floor(c.B * 255)) or 5793266
             local body = HttpService:JSONEncode({
                 username = "Throw For Animals",
-                avatar_url = ICON_ASSET,
                 embeds = { {
                     title = tostring(r.DisplayName or "?"),
-                    color = warna,
+                    color = 14423100,
                     fields = {
                         { name = "Rarity", value = rarity, inline = true },
                         { name = "Income", value = income and popFmt(income) or "?", inline = true },
@@ -3492,7 +3462,7 @@ do
                         { name = "Size", value = ukuran or "-", inline = true },
                         { name = "Account", value = lp.Name, inline = true },
                     },
-                    footer = { text = "Throw For Animals V2", icon_url = ICON_ASSET },
+                    footer = { text = "Throw For Animals V2 | by aliiiwyddd" },
                     timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
                 } },
             })
@@ -3501,6 +3471,9 @@ do
                     Headers = { ["Content-Type"] = "application/json" }, Body = body })
                 if not ok then
                     gagal("Failed to send to Discord")
+                elseif type(res) == "table" and tonumber(res.StatusCode)
+                    and (res.StatusCode < 200 or res.StatusCode >= 300) then
+                    gagal("Discord replied " .. tostring(res.StatusCode))
                 end
             end)
         end
@@ -3530,7 +3503,7 @@ do
 
     local function refreshAuto()
         autoTitle.Text = "Auto Load Config"
-        autoTitle.TextColor3 = Color3.new(1, 1, 1)
+        autoTitle.TextColor3 = C_GOOD
         tampilAuto()
     end
 
@@ -3617,28 +3590,30 @@ do
     switchRow(v1, "ESP Player", "Shows player names and distance", "ESPPlayer", setESP)
 
     local v3 = section(p, "invisible karakter")
-    switchRow(v3, "Invisible", "Hides your character", "Invisible", setInvisible)
+    switchRow(v3, "Invisible", "Hides your character (client side)", "Invisible", setInvisible)
 
     groupTitle(p, "Other")
     local o1 = section(p, "auto execute")
-    switchRow(o1, "Auto Execute", "Re-runs script after rejoin", "AutoExec", setAutoExec)
+    switchRow(o1, "Auto Execute", "Re-runs the script after a rejoin or teleport", "AutoExec", setAutoExec)
 
     local o2 = section(p, "anti afk")
     switchRow(o2, "Anti AFK", "Prevents idle kicks", "AntiAfk", setAntiAfk)
 
+    -- Auto Reconnect
     do
         local GuiService = game:GetService("GuiService")
         local TeleportService = game:GetService("TeleportService")
         local setAR
         local conns, percobaan, sedang = {}, {}, false
 
-        local o3 = section(p, "auto reconnect")
-        switchRow(o3, "Auto Reconnect", "Rejoins if you disconnect", "AutoReconnect", function(on) setAR(on) end)
+        local o3 = section(p, "auto reconnect masuk lagi terputus kick disconnect")
+        switchRow(o3, "Auto Reconnect", "Rejoins if you disconnect or get kicked", "AutoReconnect", function(on) setAR(on) end)
 
-        local function reconnect(alasan)
+        local function reconnect()
             if sedang or not State.AutoReconnect then return end
             if getgenv().__ThrowToken ~= myToken then return end
             sedang = true
+
             local now = os.clock()
             local baru = {}
             for _, t in ipairs(percobaan) do
@@ -3651,7 +3626,14 @@ do
                 return
             end
             percobaan[#percobaan + 1] = now
+
             pcall(saveLastState)
+            local qot = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+            if qot and not queuedThisRun then
+                tulisFlag(true)
+                if pcall(qot, buildQueued()) then queuedThisRun = true end
+            end
+
             task.wait(3 + #percobaan * 2)
             if State.AutoReconnect then
                 pcall(function() TeleportService:Teleport(game.PlaceId, lp) end)
@@ -3660,13 +3642,28 @@ do
             sedang = false
         end
 
-        setAR = function(on)
+        local function putus()
             for _, c in ipairs(conns) do pcall(function() c:Disconnect() end) end
             conns = {}
+        end
+
+        setAR = function(on)
+            putus()
             if not on then return end
-            conns[#conns + 1] = GuiService.ErrorMessageChanged:Connect(function(msg)
-                if msg ~= "" then task.spawn(function() reconnect(msg) end) end
+            conns[#conns + 1] = GuiService.ErrorMessageChanged:Connect(function()
+                local msg = GuiService:GetErrorMessage()
+                if msg ~= "" then task.spawn(reconnect) end
             end)
+            local ok, overlay = pcall(function()
+                return game:GetService("CoreGui").RobloxPromptGui.promptOverlay
+            end)
+            if ok and overlay then
+                conns[#conns + 1] = overlay.ChildAdded:Connect(function(c)
+                    if c.Name == "ErrorPrompt" then task.spawn(reconnect) end
+                end)
+            end
+            local sekarang = GuiService:GetErrorMessage()
+            if sekarang ~= "" then task.spawn(reconnect) end
         end
     end
 
@@ -3678,7 +3675,7 @@ do
     end
 end
 
--- ===== TUTUP =====
+-- ===== CLOSE BUTTON HANDLERS =====
 closeBtn.MouseButton1Click:Connect(function() dlg.Visible = true end)
 noBtn.MouseButton1Click:Connect(function() dlg.Visible = false end)
 yesBtn.MouseButton1Click:Connect(function()
@@ -3696,7 +3693,7 @@ yesBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
 end)
 
--- ===== MULAI =====
+-- ===== STARTUP =====
 setAntiAfk(State.AntiAfk)
 if State.FpsBooster then setFpsBooster(true) end
 setAutoExec(State.AutoExec, true)
@@ -3710,8 +3707,11 @@ do
         if okC and type(d) == "table" then statCache = d end
     end
     local function saveStat(k, v)
+        if statCache[k] == v then return end
         statCache[k] = v
-        if writefile then pcall(function() writefile(STAT_FILE, HttpService:JSONEncode(statCache)) end) end
+        if writefile then
+            pcall(function() writefile(STAT_FILE, HttpService:JSONEncode(statCache)) end)
+        end
     end
     if usersLbl and statCache.users then usersLbl.Text = "User : " .. statCache.users end
     if onlineLbl and statCache.online then onlineLbl.Text = "Online : ~" .. statCache.online end
@@ -3722,7 +3722,80 @@ do
                 if usersLbl and usersLbl.Parent then usersLbl.Text = "User : " .. v end
                 saveStat("users", v)
             end)
+            if not n and usersLbl and usersLbl.Parent and not statCache.users then
+                usersLbl.Text = "User : -"
+            end
             task.wait(n and 60 or 10)
+        end
+    end)
+
+    task.spawn(function()
+        local BUCKET = 120
+        local pinged, needCount = nil, nil
+
+        local function countOnce(b)
+            for _ = 1, 3 do
+                if counterCall("/hit/" .. COUNTER_NS .. "/on" .. b) then return true end
+                task.wait(2)
+            end
+            return false
+        end
+
+        local function readOnline(b)
+            local cur, prev, done = nil, nil, 0
+            task.spawn(function() cur = counterCall("/get/" .. COUNTER_NS .. "/on" .. b); done += 1 end)
+            task.spawn(function() prev = counterCall("/get/" .. COUNTER_NS .. "/on" .. (b - 1)); done += 1 end)
+            local t0 = os.clock()
+            while done < 2 and os.clock() - t0 < 20 do task.wait(0.1) end
+            return cur, prev
+        end
+
+        local function show(n, reachable)
+            if not (onlineLbl and onlineLbl.Parent) then return end
+            if n > 0 then
+                onlineLbl.Text = "Online : " .. n
+                saveStat("online", n)
+            elseif reachable then
+                onlineLbl.Text = "Online : 0"
+            else
+                onlineLbl.Text = "Online : err"
+            end
+        end
+
+        while gui.Parent do
+            local b = math.floor(DateTime.now().UnixTimestamp / BUCKET)
+            local reachable = false
+
+            local cur, prev = readOnline(b)
+            if cur or prev then
+                reachable = true
+                show(math.max(cur or 0, prev or 0), true)
+            end
+
+            local changed = false
+            if pinged ~= b then
+                local v = counterCall("/hit/" .. COUNTER_NS .. "/o" .. b .. userKey())
+                if v then
+                    reachable = true
+                    pinged = b
+                    if v == 1 then needCount = b end
+                end
+            end
+            if needCount == b then
+                if countOnce(b) then needCount = nil; reachable = true; changed = true end
+            elseif needCount then
+                needCount = nil
+            end
+
+            if changed or not (cur or prev) then
+                cur, prev = readOnline(b)
+                if cur or prev then reachable = true end
+            end
+            local n = math.max(cur or 0, prev or 0)
+            if pinged == b then n = math.max(n, 1) end
+            show(n, reachable)
+
+            task.wait(reachable and 60 or 10)
         end
     end)
 end
@@ -3738,7 +3811,9 @@ if fromTeleport then
         repeat task.wait(0.5) until (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")) or os.clock() - t0 > 30
         task.wait(2)
         if isfile and readfile and isfile(LASTSTATE_FILE) then
-            local okR, data = pcall(function() return HttpService:JSONDecode(readfile(LASTSTATE_FILE)) end)
+            local okR, data = pcall(function()
+                return HttpService:JSONDecode(readfile(LASTSTATE_FILE))
+            end)
             if okR and typeof(data) == "table" then
                 for _, k in ipairs(CONFIG_KEYS) do
                     if data[k] == true then applyState(k, true) end
